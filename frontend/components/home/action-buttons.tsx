@@ -1,19 +1,17 @@
-"use client";
-
 import { Camera, Upload } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/layout/link-button";
 
 export function ActionButtons() {
   return (
     <section aria-label="Scan actions" className="flex flex-col gap-3">
-      <Button variant="primary" fullWidth>
+      <LinkButton href="/scan" variant="primary" fullWidth>
         <Camera className="h-5 w-5" strokeWidth={1.5} />
         Capture Material
-      </Button>
-      <Button variant="secondary" fullWidth>
+      </LinkButton>
+      <LinkButton href="/scan" variant="secondary" fullWidth>
         <Upload className="h-5 w-5" strokeWidth={1.5} />
         Upload Image
-      </Button>
+      </LinkButton>
     </section>
   );
 }
