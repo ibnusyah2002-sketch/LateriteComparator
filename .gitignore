@@ -52,4 +52,7 @@ dataset/
 .cache/
 
 # local database files
-.database/
+database/
+
+# local dataset files
+dataset/
