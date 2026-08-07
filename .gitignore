@@ -50,3 +50,6 @@ dataset/
 
 # cache
 .cache/
+
+# local database files
+.database/
