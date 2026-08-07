@@ -1,3 +1,5 @@
+"use client";
+
 import { cn } from "@/lib/utils";
 
 type ButtonVariant = "primary" | "secondary";
@@ -9,9 +11,9 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    "bg-lcgc-primary text-white hover:bg-lcgc-primary-hover active:bg-lcgc-primary-hover",
+    "bg-[#4CAF50] text-white hover:bg-[#43A047] hover:brightness-105 active:scale-[0.98] active:bg-[#388E3C]",
   secondary:
-    "bg-lcgc-surface text-lcgc-text-primary border border-lcgc-border hover:bg-lcgc-surface-hover active:bg-lcgc-surface-hover",
+    "border border-white/8 bg-[#161616] text-white hover:bg-[#202020] hover:border-white/12 active:scale-[0.98] active:bg-[#1a1a1a]",
 };
 
 export function Button({
@@ -25,7 +27,7 @@ export function Button({
     <button
       type="button"
       className={cn(
-        "inline-flex min-h-14 items-center justify-center gap-2 rounded-[var(--radius-button)] px-6 text-base font-medium transition-colors duration-150",
+        "inline-flex min-h-[56px] items-center justify-center gap-2.5 rounded-2xl px-6 text-base font-medium transition-all duration-150 ease-out",
         variantStyles[variant],
         fullWidth && "w-full",
         className,

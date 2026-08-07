@@ -8,7 +8,7 @@ export function ActionButtons() {
     <section aria-label="Scan actions" className="flex flex-col gap-3">
       <Button variant="primary" fullWidth>
         <Camera className="h-5 w-5" strokeWidth={1.5} />
-        Capture
+        Capture Material
       </Button>
       <Button variant="secondary" fullWidth>
         <Upload className="h-5 w-5" strokeWidth={1.5} />
