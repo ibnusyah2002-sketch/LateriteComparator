@@ -1,0 +1,52 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+
+# production
+build/
+dist/
+
+# environment
+.env
+.env.local
+.env.*.local
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+
+# ide
+.vscode/
+.idea/
+
+# os
+.DS_Store
+Thumbs.db
+
+# local dataset and large files
+dataset/
+*.zip
+*.rar
+*.7z
+
+# model files
+*.pt
+*.pth
+*.onnx
+*.bin
+*.safetensors
+
+# cache
+.cache/
