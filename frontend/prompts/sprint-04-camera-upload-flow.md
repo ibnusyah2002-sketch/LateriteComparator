@@ -20,8 +20,10 @@ This sprint does NOT implement backend, AI, Supabase, or OpenCLIP yet.
 
 Allowed to create or modify:
 
+- frontend/app/page.tsx
 - frontend/app/scan/page.tsx
 - frontend/app/result/page.tsx
+- frontend/components/home/*
 - frontend/components/scan/*
 - frontend/components/result/*
 - frontend/hooks/useCamera.ts
@@ -74,6 +76,21 @@ Camera behavior:
 - Retake should reset captured image and return to live camera preview.
 
 ---
+
+## Homepage Camera Preview Update
+
+The homepage camera preview should support live camera preview after user permission.
+
+Rules:
+
+- Do not auto-start camera on homepage load.
+- Show placeholder camera preview by default.
+- Add a button or action to enable camera preview.
+- When clicked, request camera permission.
+- If permission is granted, show live camera preview inside the homepage scanner frame.
+- If permission is denied, keep placeholder state and show friendly message.
+- Homepage live camera is preview-only for this sprint.
+- Actual capture, upload, retake, and analyze flow remains on /scan.
 
 ## Upload Requirements
 
@@ -209,3 +226,18 @@ Sprint 04 is complete if:
 - Analyze Material navigates to /result
 - /result displays uploaded/captured user image
 - App runs without terminal errors
+
+## Homepage Camera Preview Update
+
+The homepage camera preview should support live camera preview after user permission.
+
+Rules:
+
+- Do not auto-start camera on homepage load.
+- Show placeholder camera preview by default.
+- Add a button or action to enable camera preview.
+- When clicked, request camera permission.
+- If permission is granted, show live camera preview inside the homepage scanner frame.
+- If permission is denied, keep placeholder state and show friendly message.
+- Homepage live camera is preview-only for this sprint.
+- Actual capture, upload, retake, and analyze flow remains on /scan.
