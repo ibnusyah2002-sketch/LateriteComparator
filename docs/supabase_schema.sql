@@ -117,6 +117,9 @@ on scan_sessions (created_at desc);
 create index if not exists scan_sessions_best_match_code_idx
 on scan_sessions (best_match_code);
 
+create unique index if not exists comparator_images_storage_path_unique_idx
+on comparator_images (storage_path);
+
 create or replace function set_updated_at()
 returns trigger as $$
 begin
