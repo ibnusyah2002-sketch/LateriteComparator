@@ -1,4 +1,6 @@
 export const SCAN_SESSION_IMAGE_KEY = "lcgc_current_scan_image";
+export const SCAN_SESSION_SOURCE_KEY = "lcgc_current_scan_source";
+export const SCAN_SESSION_CREATED_AT_KEY = "lcgc_current_scan_created_at";
 
 export const SCAN_IMAGE_CONFIG = {
   maxWidth: 1280,
