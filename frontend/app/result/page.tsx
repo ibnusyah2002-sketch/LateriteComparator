@@ -8,6 +8,7 @@ import {
   Database,
   RotateCcw,
   ScanSearch,
+  AlertTriangle,
 } from "lucide-react";
 import {
   SCAN_SESSION_CREATED_AT_KEY,
@@ -54,6 +55,37 @@ export default function ResultPage() {
     setSource(sessionStorage.getItem(SCAN_SESSION_SOURCE_KEY));
     setCreatedAt(sessionStorage.getItem(SCAN_SESSION_CREATED_AT_KEY));
   }, []);
+
+  if (!userImage) {
+    return (
+      <main className="min-h-screen bg-[#0B0F0C] px-4 py-6 text-white">
+        <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-[430px] flex-col justify-center space-y-6">
+          <section className="rounded-[28px] border border-white/10 bg-[#131816] p-6 text-center shadow-2xl">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-yellow-500/30 bg-yellow-500/10">
+              <AlertTriangle className="h-8 w-8 text-yellow-300" />
+            </div>
+
+            <h1 className="mt-5 text-2xl font-semibold text-white">
+              No Scan Image Found
+            </h1>
+
+            <p className="mt-3 text-sm leading-6 text-white/60">
+              Start from the scanner page by capturing or uploading a laterite
+              material image before viewing comparator results.
+            </p>
+
+            <Link
+              href="/"
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#4CAF50] px-5 py-4 text-base font-semibold text-black transition hover:bg-[#66BB6A]"
+            >
+              <ScanSearch className="h-5 w-5" />
+              Open Scanner
+            </Link>
+          </section>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#0B0F0C] px-4 py-6 text-white">
