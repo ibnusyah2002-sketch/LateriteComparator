@@ -56,3 +56,5 @@ database/
 
 # local dataset files
 dataset/
+# generated database validation previews
+backend/data_preview/
