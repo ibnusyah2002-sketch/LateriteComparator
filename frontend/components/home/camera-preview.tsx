@@ -244,20 +244,6 @@ export function CameraPreview({ className = "" }: CameraPreviewProps) {
           )}
         </div>
 
-        {!selectedImage && (
-          <div className="absolute bottom-5 left-1/2 w-[calc(100%-2rem)] -translate-x-1/2">
-            <button
-              type="button"
-              onClick={handleCaptureImage}
-              disabled={!isCameraActive || isStarting}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#4CAF50] px-5 py-4 text-base font-semibold text-black shadow-2xl transition hover:bg-[#66BB6A] disabled:cursor-not-allowed disabled:bg-white/15 disabled:text-white/35"
-            >
-              <ScanLine className="h-5 w-5" />
-              Capture Material
-            </button>
-          </div>
-        )}
-
         {selectedImage && (
           <div className="absolute bottom-4 left-4 right-4 rounded-2xl border border-[#4CAF50]/25 bg-black/60 p-3 backdrop-blur">
             <div className="flex items-center gap-2 text-sm font-medium text-white">
@@ -274,59 +260,70 @@ export function CameraPreview({ className = "" }: CameraPreviewProps) {
         </div>
       )}
 
-      <div className="space-y-3 border-t border-white/10 bg-[#131816] p-4">
-        {selectedImage ? (
-          <button
-            type="button"
-            onClick={handleAnalyzeMaterial}
-            disabled={isAnalyzing}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#4CAF50] px-5 py-4 text-base font-semibold text-black transition hover:bg-[#66BB6A] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isAnalyzing ? (
-              <>
-                <Loader2 className="h-5 w-5 animate-spin" />
-                Preparing Analysis...
-              </>
-            ) : (
-              <>
-                <ScanLine className="h-5 w-5" />
-                Analyze Material
-              </>
-            )}
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={handleUploadClick}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-base font-semibold text-white transition hover:bg-white/10"
-          >
-            <Upload className="h-5 w-5" />
-            Upload Image
-          </button>
-        )}
-
-        {selectedImage && (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-3 border-t border-white/10 bg-[#131816] p-4">
+          {!selectedImage && (
             <button
               type="button"
-              onClick={handleRetake}
-              className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-sm font-semibold text-white transition hover:bg-white/10"
+              onClick={handleCaptureImage}
+              disabled={!isCameraActive || isStarting}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#4CAF50] px-5 py-4 text-base font-semibold text-black transition hover:bg-[#66BB6A] disabled:cursor-not-allowed disabled:bg-white/15 disabled:text-white/35"
             >
-              <RotateCcw className="h-4 w-4" />
-              Retake
+              <ScanLine className="h-5 w-5" />
+              Capture Material
             </button>
+          )}
 
+          {selectedImage ? (
+            <button
+              type="button"
+              onClick={handleAnalyzeMaterial}
+              disabled={isAnalyzing}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#4CAF50] px-5 py-4 text-base font-semibold text-black transition hover:bg-[#66BB6A] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isAnalyzing ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Preparing Analysis...
+                </>
+              ) : (
+                <>
+                  <ScanLine className="h-5 w-5" />
+                  Analyze Material
+                </>
+              )}
+            </button>
+          ) : (
             <button
               type="button"
               onClick={handleUploadClick}
-              className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-sm font-semibold text-white transition hover:bg-white/10"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-base font-semibold text-white transition hover:bg-white/10"
             >
-              <ImageIcon className="h-4 w-4" />
-              Change
+              <Upload className="h-5 w-5" />
+              Upload Image
             </button>
-          </div>
-        )}
+          )}
 
+          {selectedImage && (
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={handleRetake}
+                className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-sm font-semibold text-white transition hover:bg-white/10"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Retake
+              </button>
+
+              <button
+                type="button"
+                onClick={handleUploadClick}
+                className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-sm font-semibold text-white transition hover:bg-white/10"
+              >
+                <ImageIcon className="h-4 w-4" />
+                Change
+              </button>
+            </div>
+          )}  
         <p className="text-center text-xs leading-5 text-white/45">
           The material photo will be compared visually against the local
           comparator database.
