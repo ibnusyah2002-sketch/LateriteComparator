@@ -105,6 +105,28 @@ Frontend:
 
 ---
 
+## Important Documentation Files
+
+Main product PRD:
+
+- docs/prd1.md
+
+Frontend PRD:
+
+- frontend/prdfrontend.md
+
+Design system:
+
+- docs/design_system.md
+
+Agent rules:
+
+- AGENTS.md
+
+Sprint 04 prompt:
+
+- frontend/prompts/sprint-04-camera-upload-flow.md
+
 ## Protected Files and Folders
 
 Do not modify unless explicitly instructed:
@@ -218,3 +240,4 @@ Avoid broad prompts:
 "Refactor the project."
 
 "Make the app production ready."
+
