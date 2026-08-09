@@ -9,6 +9,7 @@ from urllib.request import Request, urlopen
 
 SAMPLE_TABLE = "comparator_samples"
 IMAGE_TABLE = "comparator_images"
+SIGNED_URL_EXPIRES_IN_SECONDS = 3600
 
 
 def build_headers(service_role_key: str) -> dict[str, str]:
@@ -27,9 +28,16 @@ def request_json(
     endpoint: str,
     method: str,
     service_role_key: str,
+    payload: dict[str, Any] | None = None,
 ) -> Any:
+    data = None
+
+    if payload is not None:
+        data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+
     request = Request(
         endpoint,
+        data=data,
         method=method,
         headers=build_headers(service_role_key),
     )
@@ -87,6 +95,93 @@ def fetch_images_by_sample_id(
     return rows or []
 
 
+def attach_signed_urls_to_images(
+    supabase_url: str,
+    service_role_key: str,
+    bucket: str,
+    images: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    signed_images: list[dict[str, Any]] = []
+
+    for image in images:
+        signed_image = dict(image)
+        storage_path = image.get("storage_path")
+
+        if storage_path:
+            signed_image["signed_url"] = create_signed_url(
+                supabase_url=supabase_url,
+                service_role_key=service_role_key,
+                bucket=bucket,
+                storage_path=storage_path,
+                expires_in=SIGNED_URL_EXPIRES_IN_SECONDS,
+            )
+            signed_image["signed_url_expires_in"] = SIGNED_URL_EXPIRES_IN_SECONDS
+        else:
+            signed_image["signed_url"] = None
+            signed_image["signed_url_expires_in"] = None
+
+        signed_images.append(signed_image)
+
+    return signed_images
+
+
+def create_signed_url(
+    supabase_url: str,
+    service_role_key: str,
+    bucket: str,
+    storage_path: str,
+    expires_in: int,
+) -> str:
+    object_path = to_storage_object_path(storage_path, bucket)
+    encoded_object_path = quote(object_path, safe="/")
+
+    endpoint = (
+        f"{supabase_url}/storage/v1/object/sign/"
+        f"{bucket}/{encoded_object_path}"
+    )
+
+    response = request_json(
+        endpoint=endpoint,
+        method="POST",
+        service_role_key=service_role_key,
+        payload={
+            "expiresIn": expires_in,
+        },
+    )
+
+    signed_url = response.get("signedURL") or response.get("signedUrl")
+
+    if not signed_url:
+        raise RuntimeError(f"Signed URL was not returned for: {storage_path}")
+
+    return normalize_signed_url(supabase_url, signed_url)
+
+
+def to_storage_object_path(storage_path: str, bucket: str) -> str:
+    prefix = f"{bucket}/"
+
+    if storage_path.startswith(prefix):
+        return storage_path[len(prefix) :]
+
+    return storage_path
+
+
+def normalize_signed_url(supabase_url: str, signed_url: str) -> str:
+    if signed_url.startswith("http://") or signed_url.startswith("https://"):
+        return signed_url
+
+    if signed_url.startswith("/storage/v1/"):
+        return f"{supabase_url}{signed_url}"
+
+    if signed_url.startswith("/object/"):
+        return f"{supabase_url}/storage/v1{signed_url}"
+
+    if signed_url.startswith("object/"):
+        return f"{supabase_url}/storage/v1/{signed_url}"
+
+    return f"{supabase_url}/storage/v1/{signed_url.lstrip('/')}"
+
+
 def build_result_payload(
     sample: dict[str, Any],
     images: list[dict[str, Any]],
@@ -129,10 +224,18 @@ def build_result_payload(
             "raw": {
                 "storage_path": raw_image.get("storage_path") if raw_image else None,
                 "local_path": raw_image.get("local_path") if raw_image else None,
+                "signed_url": raw_image.get("signed_url") if raw_image else None,
+                "signed_url_expires_in": (
+                    raw_image.get("signed_url_expires_in") if raw_image else None
+                ),
             },
             "scale": {
                 "storage_path": scale_image.get("storage_path") if scale_image else None,
                 "local_path": scale_image.get("local_path") if scale_image else None,
+                "signed_url": scale_image.get("signed_url") if scale_image else None,
+                "signed_url_expires_in": (
+                    scale_image.get("signed_url_expires_in") if scale_image else None
+                ),
             },
         },
         "similarity": {

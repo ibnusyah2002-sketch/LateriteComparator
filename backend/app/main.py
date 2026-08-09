@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.supabase_rest import (
+    attach_signed_urls_to_images,
     build_result_payload,
     fetch_images_by_sample_id,
     fetch_sample_by_code,
@@ -13,7 +14,7 @@ from app.supabase_rest import (
 
 app = FastAPI(
     title="LCGC Backend API",
-    version="0.1.0",
+    version="0.2.0",
     description="Backend API for Laterite Comparator for Grade Control.",
 )
 
@@ -65,9 +66,16 @@ def get_comparator(
         sample_id=sample["id"],
     )
 
+    signed_images = attach_signed_urls_to_images(
+        supabase_url=settings.supabase_url,
+        service_role_key=settings.supabase_service_role_key,
+        bucket=settings.supabase_storage_bucket,
+        images=images,
+    )
+
     return {
         "sample": sample,
-        "images": images,
+        "images": signed_images,
     }
 
 
@@ -92,4 +100,11 @@ def get_mock_analysis(
         sample_id=sample["id"],
     )
 
-    return build_result_payload(sample, images)
+    signed_images = attach_signed_urls_to_images(
+        supabase_url=settings.supabase_url,
+        service_role_key=settings.supabase_service_role_key,
+        bucket=settings.supabase_storage_bucket,
+        images=images,
+    )
+
+    return build_result_payload(sample, signed_images)
