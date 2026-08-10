@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.schemas import AnalysisRequest
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -106,5 +107,51 @@ def get_mock_analysis(
         bucket=settings.supabase_storage_bucket,
         images=images,
     )
+
+@app.post("/api/analysis")
+def post_analysis(request: AnalysisRequest) -> dict:
+    settings = get_settings()
+
+    # Temporary MVP behavior:
+    # The backend receives the scanned image payload,
+    # but still returns a fixed comparator result until AI similarity is added.
+    if not request.image_data_url.startswith("data:image/"):
+        raise HTTPException(
+            status_code=400,
+            detail="image_data_url must be a valid image data URL.",
+        )
+
+    sample = fetch_sample_by_code(
+        supabase_url=settings.supabase_url,
+        service_role_key=settings.supabase_service_role_key,
+        code="BG1 - 01",
+    )
+
+    if sample is None:
+        raise HTTPException(status_code=404, detail="Default sample not found: BG1 - 01")
+
+    images = fetch_images_by_sample_id(
+        supabase_url=settings.supabase_url,
+        service_role_key=settings.supabase_service_role_key,
+        sample_id=sample["id"],
+    )
+
+    signed_images = attach_signed_urls_to_images(
+        supabase_url=settings.supabase_url,
+        service_role_key=settings.supabase_service_role_key,
+        bucket=settings.supabase_storage_bucket,
+        images=images,
+    )
+
+    payload = build_result_payload(sample, signed_images)
+
+    payload["analysis_request"] = {
+        "source": request.source,
+        "image_received": True,
+        "image_size_characters": len(request.image_data_url),
+        "mode": "mock_similarity_until_ai_pipeline",
+    }
+
+    return payload
 
     return build_result_payload(sample, signed_images)

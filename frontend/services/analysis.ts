@@ -24,3 +24,29 @@ export async function fetchMockAnalysis(
 
   return response.json();
 }
+
+export async function submitAnalysisImage({
+  imageDataUrl,
+  source = "unknown",
+}: {
+  imageDataUrl: string;
+  source?: string | null;
+}): Promise<AnalysisPayload> {
+  const response = await fetch(`${API_BASE_URL}/api/analysis`, {
+    method: "POST",
+    cache: "no-store",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      image_data_url: imageDataUrl,
+      source,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to submit analysis image: ${response.status}`);
+  }
+
+  return response.json();
+}

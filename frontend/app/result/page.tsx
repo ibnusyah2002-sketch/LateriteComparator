@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Camera, Database, ImageIcon, RefreshCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { fetchMockAnalysis } from "@/services/analysis";
+import { fetchMockAnalysis, submitAnalysisImage } from "@/services/analysis";
 import {
   SCAN_SESSION_CREATED_AT_KEY,
   SCAN_SESSION_IMAGE_KEY,
@@ -45,12 +45,23 @@ export default function ResultPage() {
     }
   }, [scanSession.createdAt]);
 
-  async function loadBackendResult() {
+  async function loadBackendResult(imageOverride?: string | null) {
     try {
       setIsLoading(true);
       setErrorMessage(null);
-
-      const result = await fetchMockAnalysis("BG1 - 01");
+  
+      const imageForAnalysis =
+        imageOverride ?? window.sessionStorage.getItem(SCAN_SESSION_IMAGE_KEY);
+      const source =
+        window.sessionStorage.getItem(SCAN_SESSION_SOURCE_KEY) ?? "unknown";
+  
+      const result = imageForAnalysis
+        ? await submitAnalysisImage({
+            imageDataUrl: imageForAnalysis,
+            source,
+          })
+        : await fetchMockAnalysis("BG1 - 01");
+  
       setAnalysis(result);
     } catch (error) {
       setAnalysis(null);
@@ -75,7 +86,7 @@ export default function ResultPage() {
       createdAt,
     });
 
-    void loadBackendResult();
+    void loadBackendResult(image);
   }, []);
 
   function handleScanAgain() {
