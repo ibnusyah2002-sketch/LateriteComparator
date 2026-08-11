@@ -1,5 +1,6 @@
 from __future__ import annotations
 from app.schemas import AnalysisRequest
+from app.image_input import decode_and_save_data_url, to_backend_relative_path
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -112,14 +113,10 @@ def get_mock_analysis(
 def post_analysis(request: AnalysisRequest) -> dict:
     settings = get_settings()
 
-    # Temporary MVP behavior:
-    # The backend receives the scanned image payload,
-    # but still returns a fixed comparator result until AI similarity is added.
-    if not request.image_data_url.startswith("data:image/"):
-        raise HTTPException(
-            status_code=400,
-            detail="image_data_url must be a valid image data URL.",
-        )
+    try:
+        decoded_image = decode_and_save_data_url(request.image_data_url)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
     sample = fetch_sample_by_code(
         supabase_url=settings.supabase_url,
@@ -149,6 +146,9 @@ def post_analysis(request: AnalysisRequest) -> dict:
         "source": request.source,
         "image_received": True,
         "image_size_characters": len(request.image_data_url),
+        "image_mime_type": decoded_image.mime_type,
+        "image_size_bytes": decoded_image.size_bytes,
+        "image_saved_path": to_backend_relative_path(decoded_image.saved_path),
         "mode": "mock_similarity_until_ai_pipeline",
     }
 

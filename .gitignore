@@ -58,3 +58,6 @@ database/
 dataset/
 # generated database validation previews
 backend/data_preview/
+
+# local runtime scan outputs
+backend/runtime_scans/
