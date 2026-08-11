@@ -64,6 +64,15 @@ Aplikasi ini memungkinkan pengguna mengambil atau mengunggah foto material later
 
 LCGC tidak bertujuan menggantikan keputusan geologist atau engineer. LCGC berfungsi sebagai alat bantu untuk meningkatkan konsistensi, efisiensi, dan kecepatan deskripsi material di lapangan.
 
+Nickel laterite comparator samples are organized by geological zones:
+topsoil, limonite, saprolite, and bedrock/fresh rock.
+
+Limonite can be subdivided into red limonite and yellow limonite.
+Saprolite can be subdivided into earthy saprolite and rocky saprolite.
+
+Each comparator sample represents a known field appearance and has associated lab assay data.
+Multiple samples can belong to the same zone when they show different visual appearances.
+The system should compare scanned material to comparator samples, not directly classify the material as a definitive zone or grade.
 ---
 
 # 2. Core Principle
