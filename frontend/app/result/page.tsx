@@ -252,6 +252,68 @@ export default function ResultPage() {
                 )}
               </div>
             </section>
+            
+            {analysis.similarity.top_candidates?.length ? (
+            <section className="mt-5 rounded-[2rem] border border-white/10 bg-white/[0.04] p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-semibold">Alternative Candidates</h2>
+                  <p className="mt-1 text-sm text-neutral-400">
+                    Top visual matches from the comparator database. These are references,
+                    not definitive classifications.
+                  </p>
+                </div>
+
+                <div className="rounded-full border border-green-400/30 bg-green-400/10 px-3 py-1 text-xs font-medium text-green-300">
+                  {analysis.similarity.method}
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-3">
+                {analysis.similarity.top_candidates.map((candidate, index) => (
+                  <div
+                    key={`${candidate.code}-${index}`}
+                    className="rounded-3xl border border-white/10 bg-black/30 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">
+                          Candidate {index + 1}
+                        </p>
+                        <h3 className="mt-1 text-lg font-semibold">
+                          {candidate.code ?? "-"}
+                        </h3>
+                      </div>
+
+                      <div className="text-right">
+                        <p className="text-xs text-neutral-500">Score</p>
+                        <p className="text-lg font-semibold text-green-300">
+                          {typeof candidate.score === "number"
+                            ? `${Math.round(candidate.score * 100)}%`
+                            : "-"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+                      <Info label="Zone" value={candidate.zone} />
+                      <Info label="Color" value={candidate.color} />
+                      <Info label="Confidence" value={candidate.confidence_label} />
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-5">
+                      <Metric label="Ni" value={candidate.qaqc.ni} suffix="%" />
+                      <Metric label="Fe" value={candidate.qaqc.fe} suffix="%" />
+                      <Metric label="MgO" value={candidate.qaqc.mgo} suffix="%" />
+                      <Metric label="Fe/Ni" value={candidate.qaqc.fe_ni} />
+                      <Metric label="S/M" value={candidate.qaqc.s_m} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+) : null}
+            
           </>
         ) : null}
 

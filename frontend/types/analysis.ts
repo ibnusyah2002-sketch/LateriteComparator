@@ -5,6 +5,26 @@ export type AnalysisImage = {
     signed_url_expires_in: number | null;
   };
   
+  export type TopCandidate = {
+    code: string | null;
+    score: number | null;
+    confidence_label: string | null;
+    zone: string | null;
+    color: string | null;
+    description: string | null;
+    qaqc: {
+      ni: number | null;
+      co: number | null;
+      fe: number | null;
+      sio2: number | null;
+      mgo: number | null;
+      fe_ni: number | null;
+      s_m: number | null;
+    };
+    local_path: string | null;
+    storage_path: string | null;
+  };
+  
   export type AnalysisPayload = {
     match_type: string;
     message: string;
@@ -34,6 +54,18 @@ export type AnalysisImage = {
     similarity: {
       score: number | null;
       confidence_label: string | null;
+      method: string | null;
       note: string | null;
+      top_candidates?: TopCandidate[];
+    };
+    analysis_request?: {
+      source: string | null;
+      image_received: boolean;
+      image_size_characters: number;
+      image_mime_type?: string;
+      image_size_bytes?: number;
+      image_saved_path?: string;
+      matched_code?: string;
+      mode?: string;
     };
   };

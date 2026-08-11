@@ -76,6 +76,39 @@ def fetch_sample_by_code(
     return rows[0]
 
 
+def fetch_samples_by_codes(
+    supabase_url: str,
+    service_role_key: str,
+    codes: list[str],
+) -> list[dict[str, Any]]:
+    unique_codes = []
+
+    for code in codes:
+        if code and code not in unique_codes:
+            unique_codes.append(code)
+
+    if not unique_codes:
+        return []
+
+    encoded_values = ",".join(
+        f'"{quote(code, safe="")}"'
+        for code in unique_codes
+    )
+
+    endpoint = (
+        f"{supabase_url}/rest/v1/{SAMPLE_TABLE}"
+        f"?select=*&code=in.({encoded_values})"
+    )
+
+    rows = request_json(
+        endpoint=endpoint,
+        method="GET",
+        service_role_key=service_role_key,
+    )
+
+    return rows or []
+
+
 def fetch_images_by_sample_id(
     supabase_url: str,
     service_role_key: str,
@@ -241,6 +274,7 @@ def build_result_payload(
         "similarity": {
             "score": None,
             "confidence_label": "placeholder",
-            "note": "AI similarity calculation will be added in the AI pipeline sprint.",
+            "method": "placeholder",
+            "note": "Similarity calculation will be attached by analysis endpoint.",
         },
     }

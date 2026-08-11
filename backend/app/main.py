@@ -12,6 +12,7 @@ from app.supabase_rest import (
     build_result_payload,
     fetch_images_by_sample_id,
     fetch_sample_by_code,
+    fetch_samples_by_codes,
 )
 
 
@@ -117,6 +118,46 @@ def get_mock_analysis(
         images=images,
     )
 
+def build_top_candidate_payloads(
+    candidate_rows: list[dict],
+    ranked_candidates: list[dict],
+) -> list[dict]:
+    sample_by_code = {
+        sample.get("code"): sample
+        for sample in candidate_rows
+        if sample.get("code")
+    }
+
+    payloads: list[dict] = []
+
+    for candidate in ranked_candidates:
+        code = candidate.get("code")
+        sample = sample_by_code.get(code, {})
+
+        payloads.append(
+            {
+                "code": code,
+                "score": candidate.get("score"),
+                "confidence_label": candidate.get("confidence_label"),
+                "zone": sample.get("zone"),
+                "color": sample.get("color"),
+                "description": sample.get("description"),
+                "qaqc": {
+                    "ni": sample.get("ni"),
+                    "co": sample.get("co"),
+                    "fe": sample.get("fe"),
+                    "sio2": sample.get("sio2"),
+                    "mgo": sample.get("mgo"),
+                    "fe_ni": sample.get("fe_ni"),
+                    "s_m": sample.get("s_m"),
+                },
+                "local_path": candidate.get("local_path"),
+                "storage_path": candidate.get("storage_path"),
+            }
+        )
+
+    return payloads    
+
 @app.post("/api/analysis")
 def post_analysis(request: AnalysisRequest) -> dict:
     settings = get_settings()
@@ -158,11 +199,29 @@ def post_analysis(request: AnalysisRequest) -> dict:
 
     payload = build_result_payload(sample, signed_images)
 
+    candidate_codes = [
+        candidate["code"]
+        for candidate in best_candidate.ranked_candidates
+        if candidate.get("code")
+    ]
+
+    candidate_rows = fetch_samples_by_codes(
+        supabase_url=settings.supabase_url,
+        service_role_key=settings.supabase_service_role_key,
+        codes=candidate_codes,
+    )
+
+    top_candidates = build_top_candidate_payloads(
+        candidate_rows=candidate_rows,
+        ranked_candidates=best_candidate.ranked_candidates,
+    )
+
     payload["similarity"] = {
         "score": best_candidate.score,
         "confidence_label": best_candidate.confidence_label,
         "method": best_candidate.method,
         "note": best_candidate.note,
+        "top_candidates": top_candidates,
     }
 
     payload["analysis_request"] = {
