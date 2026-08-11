@@ -1,11 +1,12 @@
 from __future__ import annotations
-from app.schemas import AnalysisRequest
-from app.image_input import decode_and_save_data_url, to_backend_relative_path
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.ai.similarity import find_best_candidate
 from app.config import get_settings
+from app.image_input import decode_and_save_data_url, to_backend_relative_path
+from app.schemas import AnalysisRequest
 from app.supabase_rest import (
     attach_signed_urls_to_images,
     build_result_payload,
@@ -46,6 +47,13 @@ def health() -> dict[str, str]:
         "status": "ok",
     }
 
+@app.get("/api/ai/health")
+def ai_health() -> dict[str, str]:
+    return {
+        "status": "ok",
+        "mode": "pre_ai_placeholder",
+        "next": "image feature extraction and comparator similarity search",
+    }
 
 @app.get("/api/comparator")
 def get_comparator(
@@ -118,14 +126,22 @@ def post_analysis(request: AnalysisRequest) -> dict:
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
+    try:
+        best_candidate = find_best_candidate(decoded_image.saved_path)
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
     sample = fetch_sample_by_code(
         supabase_url=settings.supabase_url,
         service_role_key=settings.supabase_service_role_key,
-        code="BG1 - 01",
+        code=best_candidate.code,
     )
 
     if sample is None:
-        raise HTTPException(status_code=404, detail="Default sample not found: BG1 - 01")
+        raise HTTPException(
+            status_code=404,
+            detail=f"Matched sample not found: {best_candidate.code}",
+        )
 
     images = fetch_images_by_sample_id(
         supabase_url=settings.supabase_url,
@@ -142,6 +158,13 @@ def post_analysis(request: AnalysisRequest) -> dict:
 
     payload = build_result_payload(sample, signed_images)
 
+    payload["similarity"] = {
+        "score": best_candidate.score,
+        "confidence_label": best_candidate.confidence_label,
+        "method": best_candidate.method,
+        "note": best_candidate.note,
+    }
+
     payload["analysis_request"] = {
         "source": request.source,
         "image_received": True,
@@ -149,7 +172,8 @@ def post_analysis(request: AnalysisRequest) -> dict:
         "image_mime_type": decoded_image.mime_type,
         "image_size_bytes": decoded_image.size_bytes,
         "image_saved_path": to_backend_relative_path(decoded_image.saved_path),
-        "mode": "mock_similarity_until_ai_pipeline",
+        "matched_code": best_candidate.code,
+        "mode": best_candidate.method,
     }
 
     return payload
