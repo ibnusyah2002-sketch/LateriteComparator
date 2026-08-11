@@ -61,3 +61,6 @@ backend/data_preview/
 
 # local runtime scan outputs
 backend/runtime_scans/
+
+# generated image feature cache
+backend/feature_cache/
