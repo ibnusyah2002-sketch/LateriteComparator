@@ -1,16 +1,23 @@
 "use client";
 
-import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Camera, Database, ImageIcon, RefreshCcw } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ArrowLeft,
+  Camera,
+  Database,
+  ImageIcon,
+  RefreshCcw,
+  ShieldCheck,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
+
 import { fetchMockAnalysis, submitAnalysisImage } from "@/services/analysis";
 import {
   SCAN_SESSION_CREATED_AT_KEY,
   SCAN_SESSION_IMAGE_KEY,
   SCAN_SESSION_SOURCE_KEY,
 } from "@/constants/scan";
-import type { AnalysisPayload } from "@/types/analysis";
+import type { AnalysisPayload, TopCandidate } from "@/types/analysis";
 
 type ScanSession = {
   image: string | null;
@@ -45,23 +52,30 @@ export default function ResultPage() {
     }
   }, [scanSession.createdAt]);
 
-  async function loadBackendResult(imageOverride?: string | null) {
+  const alternativeCandidates = useMemo(() => {
+    const candidates = analysis?.similarity.top_candidates ?? [];
+    const matchedCode = analysis?.matched_sample.code;
+
+    return candidates.filter((candidate) => candidate.code !== matchedCode);
+  }, [analysis]);
+
+  const loadBackendResult = useCallback(async (imageOverride?: string | null) => {
     try {
       setIsLoading(true);
       setErrorMessage(null);
-  
+
       const imageForAnalysis =
         imageOverride ?? window.sessionStorage.getItem(SCAN_SESSION_IMAGE_KEY);
       const source =
         window.sessionStorage.getItem(SCAN_SESSION_SOURCE_KEY) ?? "unknown";
-  
+
       const result = imageForAnalysis
         ? await submitAnalysisImage({
             imageDataUrl: imageForAnalysis,
             source,
           })
         : await fetchMockAnalysis("BG1 - 01");
-  
+
       setAnalysis(result);
     } catch (error) {
       setAnalysis(null);
@@ -73,7 +87,7 @@ export default function ResultPage() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     const image = window.sessionStorage.getItem(SCAN_SESSION_IMAGE_KEY);
@@ -87,7 +101,7 @@ export default function ResultPage() {
     });
 
     void loadBackendResult(image);
-  }, []);
+  }, [loadBackendResult]);
 
   function handleScanAgain() {
     window.sessionStorage.removeItem(SCAN_SESSION_IMAGE_KEY);
@@ -125,7 +139,7 @@ export default function ResultPage() {
 
   return (
     <main className="min-h-screen bg-[#0B0B0B] pb-24 text-white">
-      <section className="mx-auto max-w-3xl px-5 py-6">
+      <section className="mx-auto max-w-4xl px-5 py-6">
         <header className="flex items-center justify-between gap-4">
           <button
             type="button"
@@ -144,8 +158,9 @@ export default function ResultPage() {
           </div>
         </header>
 
-        <section className="mt-6 rounded-[2rem] border border-white/10 bg-white/[0.04] p-4">
-          <div className="flex items-center gap-2 text-sm text-neutral-400">
+        {/* 1. Backend Connected Result */}
+        <section className="mt-6 rounded-[2rem] border border-green-400/20 bg-green-400/10 p-4">
+          <div className="flex items-center gap-2 text-sm text-green-200">
             <Database className="h-4 w-4 text-green-400" />
             <span>Backend connected result</span>
           </div>
@@ -175,38 +190,96 @@ export default function ResultPage() {
 
           {analysis ? (
             <div className="mt-4">
-              <p className="text-lg font-medium leading-7">{analysis.message}</p>
+              <p className="text-lg font-medium leading-7">
+                {analysis.message}
+              </p>
 
               <div className="mt-4 grid gap-3 rounded-3xl bg-black/30 p-4 text-sm sm:grid-cols-3">
                 <Info label="Code" value={analysis.matched_sample.code} />
                 <Info label="Zone" value={analysis.matched_sample.zone} />
                 <Info label="Color" value={analysis.matched_sample.color} />
               </div>
+
+              <div className="mt-4 grid gap-3 rounded-3xl bg-black/30 p-4 text-sm sm:grid-cols-3">
+                <Info
+                  label="Similarity Method"
+                  value={analysis.similarity.method}
+                />
+                <Info
+                  label="Score"
+                  value={formatPercent(analysis.similarity.score)}
+                />
+                <Info
+                  label="Confidence"
+                  value={analysis.similarity.confidence_label}
+                />
+              </div>
             </div>
           ) : null}
         </section>
 
-        <section className="mt-5 grid gap-5 md:grid-cols-2">
-          <ImagePanel
-            title="Scanned Material"
-            subtitle={`${scanSession.source ?? "scan"} · ${scannedAtLabel}`}
-            imageUrl={scanSession.image}
-            isSessionImage
-          />
-
-          <ImagePanel
-            title="Comparator Match"
-            subtitle={analysis?.images.raw.storage_path ?? "Supabase signed URL"}
-            imageUrl={analysis?.images.raw.signed_url ?? null}
-          />
-        </section>
-
         {analysis ? (
           <>
-            <section className="mt-5 rounded-[2rem] border border-white/10 bg-white/[0.04] p-5">
-              <h2 className="text-lg font-semibold">Material Description</h2>
+            {/* 2. Visual Similarity Reference */}
+            <section className="mt-5 rounded-[2rem] border border-amber-400/20 bg-amber-400/10 p-5">
+              <div className="flex items-start gap-3">
+                <ShieldCheck className="mt-1 h-5 w-5 shrink-0 text-amber-300" />
 
-              <dl className="mt-4 grid gap-4 text-sm">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">
+                    Visual Similarity Reference
+                  </p>
+
+                  <h2 className="mt-2 text-lg font-semibold text-white">
+                    Comparator-based interpretation
+                  </h2>
+
+                  <p className="mt-3 text-sm leading-6 text-neutral-300">
+                    This result compares the scanned laterite material against
+                    documented comparator samples. The displayed zone and QAQC
+                    values are references from the matched comparator sample, not
+                    a definitive field classification or final grade prediction.
+                  </p>
+
+                  <p className="mt-3 text-sm leading-6 text-neutral-400">
+                    Final grade control decisions should still refer to validated
+                    sampling, QAQC procedures, and laboratory assay results.
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            {/* 3. Foto lapangan dan raw comparator kanan-kiri */}
+            <section className="mt-5 grid gap-5 md:grid-cols-2">
+              <ImagePanel
+                title="Field Scan"
+                subtitle={`${scanSession.source ?? "scan"} · ${scannedAtLabel}`}
+                imageUrl={scanSession.image}
+              />
+
+              <ImagePanel
+                title="Raw Comparator"
+                subtitle={
+                  analysis.images.raw.storage_path ?? "Supabase signed URL"
+                }
+                imageUrl={analysis.images.raw.signed_url ?? null}
+              />
+            </section>
+
+            {/* 4. Material description dari raw comparator */}
+            <section className="mt-5 rounded-[2rem] border border-white/10 bg-white/[0.04] p-5">
+              <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">
+                Matched Raw Comparator
+              </p>
+
+              <h2 className="mt-2 text-lg font-semibold">
+                Material Description
+              </h2>
+
+              <div className="mt-4 grid gap-4 text-sm">
+                <Info label="Code" value={analysis.matched_sample.code} />
+                <Info label="Zone" value={analysis.matched_sample.zone} />
+                <Info label="Color" value={analysis.matched_sample.color} />
                 <Info label="Size" value={analysis.matched_sample.size_text} />
                 <Info
                   label="Composition"
@@ -216,11 +289,22 @@ export default function ResultPage() {
                   label="Description"
                   value={analysis.matched_sample.description}
                 />
-              </dl>
+              </div>
             </section>
 
+            {/* 5. QAQC hasil lab material raw */}
             <section className="mt-5 rounded-[2rem] border border-white/10 bg-white/[0.04] p-5">
-              <h2 className="text-lg font-semibold">QAQC Reference</h2>
+              <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">
+                Laboratory Reference
+              </p>
+
+              <h2 className="mt-2 text-lg font-semibold">
+                QAQC Lab Reference
+              </h2>
+
+              <p className="mt-1 text-sm text-neutral-400">
+                Laboratory assay values from the matched raw comparator sample.
+              </p>
 
               <div className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
                 <Metric label="Ni" value={analysis.qaqc.ni} suffix="%" />
@@ -234,8 +318,18 @@ export default function ResultPage() {
               </div>
             </section>
 
+            {/* 6. Scale image */}
             <section className="mt-5 rounded-[2rem] border border-white/10 bg-white/[0.04] p-5">
-              <h2 className="text-lg font-semibold">Scale Image</h2>
+              <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">
+                Scale Documentation
+              </p>
+
+              <h2 className="mt-2 text-lg font-semibold">Scale Image</h2>
+
+              <p className="mt-1 text-sm text-neutral-400">
+                Scale or reference documentation image from the matched
+                comparator sample.
+              </p>
 
               <div className="mt-4 overflow-hidden rounded-3xl border border-white/10 bg-black/30">
                 {analysis.images.scale.signed_url ? (
@@ -252,68 +346,49 @@ export default function ResultPage() {
                 )}
               </div>
             </section>
-            
-            {analysis.similarity.top_candidates?.length ? (
+
+            {/* 7. Alternative candidates selain result utama */}
             <section className="mt-5 rounded-[2rem] border border-white/10 bg-white/[0.04] p-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-lg font-semibold">Alternative Candidates</h2>
-                  <p className="mt-1 text-sm text-neutral-400">
-                    Top visual matches from the comparator database. These are references,
-                    not definitive classifications.
+                  <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">
+                    Comparator Alternatives
+                  </p>
+
+                  <h2 className="mt-2 text-lg font-semibold">
+                    Alternative Candidates
+                  </h2>
+
+                  <p className="mt-1 text-sm leading-6 text-neutral-400">
+                    Additional visual matches outside the main backend result.
+                    These candidates help users compare similar laterite
+                    appearances and should be treated as references, not
+                    definitive classifications.
                   </p>
                 </div>
 
-                <div className="rounded-full border border-green-400/30 bg-green-400/10 px-3 py-1 text-xs font-medium text-green-300">
-                  {analysis.similarity.method}
+                <div className="shrink-0 rounded-full border border-green-400/30 bg-green-400/10 px-3 py-1 text-xs font-medium text-green-300">
+                  {analysis.similarity.method ?? "similarity_baseline"}
                 </div>
               </div>
 
-              <div className="mt-4 grid gap-3">
-                {analysis.similarity.top_candidates.map((candidate, index) => (
-                  <div
-                    key={`${candidate.code}-${index}`}
-                    className="rounded-3xl border border-white/10 bg-black/30 p-4"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">
-                          Candidate {index + 1}
-                        </p>
-                        <h3 className="mt-1 text-lg font-semibold">
-                          {candidate.code ?? "-"}
-                        </h3>
-                      </div>
-
-                      <div className="text-right">
-                        <p className="text-xs text-neutral-500">Score</p>
-                        <p className="text-lg font-semibold text-green-300">
-                          {typeof candidate.score === "number"
-                            ? `${Math.round(candidate.score * 100)}%`
-                            : "-"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
-                      <Info label="Zone" value={candidate.zone} />
-                      <Info label="Color" value={candidate.color} />
-                      <Info label="Confidence" value={candidate.confidence_label} />
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-5">
-                      <Metric label="Ni" value={candidate.qaqc.ni} suffix="%" />
-                      <Metric label="Fe" value={candidate.qaqc.fe} suffix="%" />
-                      <Metric label="MgO" value={candidate.qaqc.mgo} suffix="%" />
-                      <Metric label="Fe/Ni" value={candidate.qaqc.fe_ni} />
-                      <Metric label="S/M" value={candidate.qaqc.s_m} />
-                    </div>
-                  </div>
-                ))}
-              </div>
+              {alternativeCandidates.length ? (
+                <div className="mt-4 grid gap-3">
+                  {alternativeCandidates.map((candidate, index) => (
+                    <AlternativeCandidateCard
+                      key={`${candidate.code}-${index}`}
+                      candidate={candidate}
+                      index={index}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-4 rounded-3xl border border-white/10 bg-black/30 p-4 text-sm text-neutral-400">
+                  No alternative candidates are available outside the main
+                  matched result.
+                </div>
+              )}
             </section>
-) : null}
-            
           </>
         ) : null}
 
@@ -343,32 +418,21 @@ function ImagePanel({
   title,
   subtitle,
   imageUrl,
-  isSessionImage = false,
 }: {
   title: string;
   subtitle: string;
   imageUrl: string | null;
-  isSessionImage?: boolean;
 }) {
   return (
     <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04]">
       <div className="relative aspect-[4/3] bg-black/40">
         {imageUrl ? (
-          isSessionImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={imageUrl}
-              alt={title}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={imageUrl}
-              alt={title}
-              className="h-full w-full object-cover"
-            />
-          )
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={imageUrl}
+            alt={title}
+            className="h-full w-full object-cover"
+          />
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-neutral-500">
             <ImageIcon className="h-8 w-8" />
@@ -385,19 +449,72 @@ function ImagePanel({
   );
 }
 
+function AlternativeCandidateCard({
+  candidate,
+  index,
+}: {
+  candidate: TopCandidate;
+  index: number;
+}) {
+  return (
+    <div className="rounded-3xl border border-white/10 bg-black/30 p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">
+            Alternative {index + 1}
+          </p>
+
+          <h3 className="mt-1 text-lg font-semibold">
+            {candidate.code ?? "-"}
+          </h3>
+        </div>
+
+        <div className="text-right">
+          <p className="text-xs text-neutral-500">Score</p>
+          <p className="text-lg font-semibold text-green-300">
+            {formatPercent(candidate.score)}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+        <Info label="Zone" value={candidate.zone} />
+        <Info label="Color" value={candidate.color} />
+        <Info label="Confidence" value={candidate.confidence_label} />
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-5">
+        <Metric label="Ni" value={candidate.qaqc.ni} suffix="%" />
+        <Metric label="Fe" value={candidate.qaqc.fe} suffix="%" />
+        <Metric label="MgO" value={candidate.qaqc.mgo} suffix="%" />
+        <Metric label="Fe/Ni" value={candidate.qaqc.fe_ni} />
+        <Metric label="S/M" value={candidate.qaqc.s_m} />
+      </div>
+
+      {candidate.description ? (
+        <p className="mt-4 text-sm leading-6 text-neutral-400">
+          {candidate.description}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function Info({
   label,
   value,
 }: {
   label: string;
-  value: string | null | undefined;
+  value: string | number | null | undefined;
 }) {
   return (
     <div>
       <dt className="text-xs uppercase tracking-[0.2em] text-neutral-500">
         {label}
       </dt>
-      <dd className="mt-1 text-neutral-100">{value ?? "-"}</dd>
+      <dd className="mt-1 break-words text-neutral-100">
+        {value === null || value === undefined || value === "" ? "-" : value}
+      </dd>
     </div>
   );
 }
@@ -408,7 +525,7 @@ function Metric({
   suffix = "",
 }: {
   label: string;
-  value: number | null;
+  value: number | null | undefined;
   suffix?: string;
 }) {
   return (
@@ -427,4 +544,12 @@ function formatNumber(value: number) {
   return new Intl.NumberFormat("id-ID", {
     maximumFractionDigits: 2,
   }).format(value);
+}
+
+function formatPercent(value: number | null | undefined) {
+  if (typeof value !== "number") {
+    return "-";
+  }
+
+  return `${Math.round(value * 100)}%`;
 }
