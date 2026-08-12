@@ -156,7 +156,7 @@ def build_top_candidate_payloads(
             }
         )
 
-    return payloads    
+    return payloads  
 
 @app.post("/api/analysis")
 def post_analysis(request: AnalysisRequest) -> dict:
@@ -224,6 +224,8 @@ def post_analysis(request: AnalysisRequest) -> dict:
         "top_candidates": top_candidates,
     }
 
+    preprocessing = best_candidate.preprocessing
+
     payload["analysis_request"] = {
         "source": request.source,
         "image_received": True,
@@ -233,6 +235,15 @@ def post_analysis(request: AnalysisRequest) -> dict:
         "image_saved_path": to_backend_relative_path(decoded_image.saved_path),
         "matched_code": best_candidate.code,
         "mode": best_candidate.method,
+        "preprocessing_method": preprocessing.method if preprocessing else None,
+        "preprocessed_image_saved_path": (
+            to_backend_relative_path(preprocessing.processed_path)
+            if preprocessing
+            else None
+        ),
+        "preprocessing_crop_ratio": preprocessing.crop_ratio if preprocessing else None,
+        "original_image_size": preprocessing.original_size if preprocessing else None,
+        "processed_image_size": preprocessing.processed_size if preprocessing else None,
     }
 
     return payload

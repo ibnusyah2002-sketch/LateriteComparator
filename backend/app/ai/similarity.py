@@ -10,6 +10,7 @@ from app.ai.image_features import (
     confidence_label_from_score,
     extract_image_feature,
 )
+from app.ai.preprocessing import PreprocessedImage, preprocess_scan_image
 
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
@@ -26,6 +27,7 @@ class SimilarityCandidate:
     method: str
     note: str
     ranked_candidates: list[dict[str, Any]]
+    preprocessing: PreprocessedImage | None
 
 
 def find_best_candidate(scan_image_path: Path) -> SimilarityCandidate:
@@ -42,9 +44,11 @@ def find_best_candidate(scan_image_path: Path) -> SimilarityCandidate:
             method="pre_ai_placeholder",
             note="Feature cache not found. Falling back to default comparator.",
             ranked_candidates=[],
+            preprocessing=None,
         )
 
-    scan_feature = extract_image_feature(scan_image_path)
+    preprocessing = preprocess_scan_image(scan_image_path)
+    scan_feature = extract_image_feature(preprocessing.processed_path)
     scan_vector = scan_feature["vector"]
 
     all_candidates: list[dict[str, Any]] = []
@@ -76,6 +80,7 @@ def find_best_candidate(scan_image_path: Path) -> SimilarityCandidate:
             method="color_feature_fallback",
             note="No valid comparator feature vectors found. Falling back to default comparator.",
             ranked_candidates=[],
+            preprocessing=preprocessing,
         )
 
     ranked_candidates = sorted(
@@ -92,12 +97,14 @@ def find_best_candidate(scan_image_path: Path) -> SimilarityCandidate:
         code=best["code"] or DEFAULT_COMPARATOR_CODE,
         score=score,
         confidence_label=confidence_label_from_score(score),
-        method="color_feature_v1",
+        method="color_feature_v2_preprocessed",
         note=(
-            "Matched using lightweight color statistics and RGB histogram. "
-            "This is an early baseline before OpenCLIP visual embedding."
+            "Matched using center-cropped and auto-contrasted scan image with "
+            "lightweight color statistics and RGB histogram. This reduces background "
+            "influence before future texture and OpenCLIP improvements."
         ),
         ranked_candidates=top_candidates,
+        preprocessing=preprocessing,
     )
 
 

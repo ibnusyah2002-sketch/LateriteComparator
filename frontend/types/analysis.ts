@@ -67,5 +67,10 @@ export type AnalysisImage = {
       image_saved_path?: string;
       matched_code?: string;
       mode?: string;
+      preprocessing_method?: string | null;
+      preprocessed_image_saved_path?: string | null;
+      preprocessing_crop_ratio?: number | null;
+      original_image_size?: [number, number] | null;
+      processed_image_size?: [number, number] | null;
     };
   };
