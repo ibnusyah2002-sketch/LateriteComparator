@@ -64,3 +64,6 @@ backend/runtime_scans/
 
 # generated image feature cache
 backend/feature_cache/
+
+# local field photo tests
+testing/field_photos/
