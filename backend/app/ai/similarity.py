@@ -97,11 +97,12 @@ def find_best_candidate(scan_image_path: Path) -> SimilarityCandidate:
         code=best["code"] or DEFAULT_COMPARATOR_CODE,
         score=score,
         confidence_label=confidence_label_from_score(score),
-        method="color_feature_v2_preprocessed",
+        method="color_texture_feature_v1_preprocessed",
         note=(
             "Matched using center-cropped and auto-contrasted scan image with "
-            "lightweight color statistics and RGB histogram. This reduces background "
-            "influence before future texture and OpenCLIP improvements."
+            "color, histogram, grayscale contrast, and edge-density texture features. "
+            "This improves roughness sensitivity before future geology-aware reranking "
+            "and OpenCLIP improvements."
         ),
         ranked_candidates=top_candidates,
         preprocessing=preprocessing,
