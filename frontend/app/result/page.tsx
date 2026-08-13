@@ -470,10 +470,10 @@ function AlternativeCandidateCard({
         </div>
 
         <div className="text-right">
-          <p className="text-xs text-neutral-500">Score</p>
-          <p className="text-lg font-semibold text-green-300">
-            {formatPercent(candidate.score)}
-          </p>
+        <p className="text-xs text-neutral-500">Final Score</p>
+        <p className="text-lg font-semibold text-green-300">
+          {formatPercent(candidate.final_score ?? candidate.score)}
+        </p>
         </div>
       </div>
 
@@ -481,6 +481,12 @@ function AlternativeCandidateCard({
         <Info label="Zone" value={candidate.zone} />
         <Info label="Color" value={candidate.color} />
         <Info label="Confidence" value={candidate.confidence_label} />
+      </div>
+
+      <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
+        <ScoreBox label="Visual" value={candidate.visual_score} />
+        <ScoreBox label="Zone" value={candidate.zone_score} />
+        <ScoreBox label="Grade" value={candidate.grade_score} />
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-5">
@@ -535,6 +541,25 @@ function Metric({
       </p>
       <p className="mt-2 text-lg font-semibold">
         {typeof value === "number" ? `${formatNumber(value)}${suffix}` : "-"}
+      </p>
+    </div>
+  );
+}
+
+function ScoreBox({
+  label,
+  value,
+}: {
+  label: string;
+  value?: number | null;
+}) {
+  return (
+    <div className="rounded-2xl bg-black/30 p-3">
+      <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">
+        {label}
+      </p>
+      <p className="mt-2 text-base font-semibold text-white">
+        {formatPercent(value)}
       </p>
     </div>
   );

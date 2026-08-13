@@ -16,7 +16,7 @@ from app.ai.preprocessing import PreprocessedImage, preprocess_scan_image
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
 FEATURE_CACHE_PATH = BACKEND_ROOT / "feature_cache" / "comparator_features.json"
 DEFAULT_COMPARATOR_CODE = "BG1 - 01"
-TOP_CANDIDATE_LIMIT = 5
+VISUAL_CANDIDATE_POOL_LIMIT = 20
 
 
 @dataclass(frozen=True)
@@ -89,8 +89,8 @@ def find_best_candidate(scan_image_path: Path) -> SimilarityCandidate:
         reverse=True,
     )
 
-    top_candidates = ranked_candidates[:TOP_CANDIDATE_LIMIT]
-    best = top_candidates[0]
+    visual_candidates = ranked_candidates[:VISUAL_CANDIDATE_POOL_LIMIT]
+    best = visual_candidates[0]
     score = best["score"]
 
     return SimilarityCandidate(
@@ -104,7 +104,7 @@ def find_best_candidate(scan_image_path: Path) -> SimilarityCandidate:
             "This improves roughness sensitivity before future geology-aware reranking "
             "and OpenCLIP improvements."
         ),
-        ranked_candidates=top_candidates,
+        ranked_candidates=visual_candidates,
         preprocessing=preprocessing,
     )
 

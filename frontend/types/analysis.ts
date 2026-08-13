@@ -23,6 +23,13 @@ export type AnalysisImage = {
     };
     local_path: string | null;
     storage_path: string | null;
+    final_score?: number | null;
+    visual_score?: number | null;
+    zone_score?: number | null;
+    grade_score?: number | null;
+    ranking_method?: string | null;
+    anchor_code?: string | null;
+    anchor_zone?: string | null;
   };
   
   export type AnalysisPayload = {
@@ -56,8 +63,10 @@ export type AnalysisImage = {
       confidence_label: string | null;
       method: string | null;
       note: string | null;
+      reranking_method?: string | null;
       top_candidates?: TopCandidate[];
     };
+    
     analysis_request?: {
       source: string | null;
       image_received: boolean;
@@ -73,4 +82,5 @@ export type AnalysisImage = {
       original_image_size?: [number, number] | null;
       processed_image_size?: [number, number] | null;
     };
+    
   };

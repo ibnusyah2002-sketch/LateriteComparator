@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.ai.geology_reranking import RERANKING_METHOD, rerank_candidates
 from app.ai.similarity import find_best_candidate
 from app.config import get_settings
 from app.image_input import decode_and_save_data_url, to_backend_relative_path
@@ -12,7 +13,6 @@ from app.supabase_rest import (
     build_result_payload,
     fetch_images_by_sample_id,
     fetch_sample_by_code,
-    fetch_samples_by_codes,
 )
 
 
@@ -48,13 +48,15 @@ def health() -> dict[str, str]:
         "status": "ok",
     }
 
+
 @app.get("/api/ai/health")
 def ai_health() -> dict[str, str]:
     return {
         "status": "ok",
-        "mode": "pre_ai_placeholder",
-        "next": "image feature extraction and comparator similarity search",
+        "mode": "color_texture_similarity_with_geology_reranking",
+        "next": "field photo calibration, geology-aware reranking, and OpenCLIP upgrade",
     }
+
 
 @app.get("/api/comparator")
 def get_comparator(
@@ -118,45 +120,8 @@ def get_mock_analysis(
         images=images,
     )
 
-def build_top_candidate_payloads(
-    candidate_rows: list[dict],
-    ranked_candidates: list[dict],
-) -> list[dict]:
-    sample_by_code = {
-        sample.get("code"): sample
-        for sample in candidate_rows
-        if sample.get("code")
-    }
+    return build_result_payload(sample, signed_images)
 
-    payloads: list[dict] = []
-
-    for candidate in ranked_candidates:
-        code = candidate.get("code")
-        sample = sample_by_code.get(code, {})
-
-        payloads.append(
-            {
-                "code": code,
-                "score": candidate.get("score"),
-                "confidence_label": candidate.get("confidence_label"),
-                "zone": sample.get("zone"),
-                "color": sample.get("color"),
-                "description": sample.get("description"),
-                "qaqc": {
-                    "ni": sample.get("ni"),
-                    "co": sample.get("co"),
-                    "fe": sample.get("fe"),
-                    "sio2": sample.get("sio2"),
-                    "mgo": sample.get("mgo"),
-                    "fe_ni": sample.get("fe_ni"),
-                    "s_m": sample.get("s_m"),
-                },
-                "local_path": candidate.get("local_path"),
-                "storage_path": candidate.get("storage_path"),
-            }
-        )
-
-    return payloads  
 
 @app.post("/api/analysis")
 def post_analysis(request: AnalysisRequest) -> dict:
@@ -205,21 +170,34 @@ def post_analysis(request: AnalysisRequest) -> dict:
         if candidate.get("code")
     ]
 
-    candidate_rows = fetch_samples_by_codes(
-        supabase_url=settings.supabase_url,
-        service_role_key=settings.supabase_service_role_key,
-        codes=candidate_codes,
+    candidate_rows = []
+
+    for candidate_code in candidate_codes:
+        candidate_sample = fetch_sample_by_code(
+            supabase_url=settings.supabase_url,
+            service_role_key=settings.supabase_service_role_key,
+            code=candidate_code,
+        )
+
+        if candidate_sample:
+            candidate_rows.append(candidate_sample)
+
+    reranked_candidates = rerank_candidates(
+        ranked_candidates=best_candidate.ranked_candidates,
+        candidate_rows=candidate_rows,
+        anchor_code=best_candidate.code,
     )
 
     top_candidates = build_top_candidate_payloads(
         candidate_rows=candidate_rows,
-        ranked_candidates=best_candidate.ranked_candidates,
+        ranked_candidates=reranked_candidates,
     )
 
     payload["similarity"] = {
         "score": best_candidate.score,
         "confidence_label": best_candidate.confidence_label,
         "method": best_candidate.method,
+        "reranking_method": RERANKING_METHOD,
         "note": best_candidate.note,
         "top_candidates": top_candidates,
     }
@@ -244,8 +222,56 @@ def post_analysis(request: AnalysisRequest) -> dict:
         "preprocessing_crop_ratio": preprocessing.crop_ratio if preprocessing else None,
         "original_image_size": preprocessing.original_size if preprocessing else None,
         "processed_image_size": preprocessing.processed_size if preprocessing else None,
+        "visual_candidate_count": len(best_candidate.ranked_candidates),
+        "reranked_candidate_count": len(top_candidates),
     }
 
     return payload
 
-    return build_result_payload(sample, signed_images)
+
+def build_top_candidate_payloads(
+    candidate_rows: list[dict],
+    ranked_candidates: list[dict],
+) -> list[dict]:
+    sample_by_code = {
+        sample.get("code"): sample
+        for sample in candidate_rows
+        if sample.get("code")
+    }
+
+    payloads: list[dict] = []
+
+    for candidate in ranked_candidates:
+        code = candidate.get("code")
+        sample = sample_by_code.get(code, {})
+
+        payloads.append(
+            {
+                "code": code,
+                "score": candidate.get("final_score", candidate.get("score")),
+                "final_score": candidate.get("final_score", candidate.get("score")),
+                "visual_score": candidate.get("visual_score"),
+                "zone_score": candidate.get("zone_score"),
+                "grade_score": candidate.get("grade_score"),
+                "ranking_method": candidate.get("ranking_method"),
+                "anchor_code": candidate.get("anchor_code"),
+                "anchor_zone": candidate.get("anchor_zone"),
+                "confidence_label": candidate.get("confidence_label"),
+                "zone": sample.get("zone"),
+                "color": sample.get("color"),
+                "description": sample.get("description"),
+                "qaqc": {
+                    "ni": sample.get("ni"),
+                    "co": sample.get("co"),
+                    "fe": sample.get("fe"),
+                    "sio2": sample.get("sio2"),
+                    "mgo": sample.get("mgo"),
+                    "fe_ni": sample.get("fe_ni"),
+                    "s_m": sample.get("s_m"),
+                },
+                "local_path": candidate.get("local_path"),
+                "storage_path": candidate.get("storage_path"),
+            }
+        )
+
+    return payloads
