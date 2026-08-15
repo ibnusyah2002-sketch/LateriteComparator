@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -16,6 +18,27 @@ from app.supabase_rest import (
 )
 
 
+DEFAULT_FRONTEND_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://laterite-comparator.vercel.app",
+]
+
+
+def get_allowed_origins() -> list[str]:
+    raw_origins = os.getenv("FRONTEND_ORIGINS", "")
+
+    env_origins = [
+        origin.strip().rstrip("/")
+        for origin in raw_origins.split(",")
+        if origin.strip()
+    ]
+
+    origins = [*DEFAULT_FRONTEND_ORIGINS, *env_origins]
+
+    return list(dict.fromkeys(origins))
+
+
 app = FastAPI(
     title="LCGC Backend API",
     version="0.2.0",
@@ -24,10 +47,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=get_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
