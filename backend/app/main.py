@@ -5,6 +5,7 @@ import os
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.ai.zone_selection import ZONE_SELECTION_METHOD, select_zone_level_candidate
 from app.ai.geology_reranking import RERANKING_METHOD, rerank_candidates
 from app.ai.similarity import find_best_candidate
 from app.config import get_settings
@@ -157,33 +158,6 @@ def post_analysis(request: AnalysisRequest) -> dict:
     except FileNotFoundError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
-    sample = fetch_sample_by_code(
-        supabase_url=settings.supabase_url,
-        service_role_key=settings.supabase_service_role_key,
-        code=best_candidate.code,
-    )
-
-    if sample is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Matched sample not found: {best_candidate.code}",
-        )
-
-    images = fetch_images_by_sample_id(
-        supabase_url=settings.supabase_url,
-        service_role_key=settings.supabase_service_role_key,
-        sample_id=sample["id"],
-    )
-
-    signed_images = attach_signed_urls_to_images(
-        supabase_url=settings.supabase_url,
-        service_role_key=settings.supabase_service_role_key,
-        bucket=settings.supabase_storage_bucket,
-        images=images,
-    )
-
-    payload = build_result_payload(sample, signed_images)
-
     candidate_codes = [
         candidate["code"]
         for candidate in best_candidate.ranked_candidates
@@ -202,10 +176,54 @@ def post_analysis(request: AnalysisRequest) -> dict:
         if candidate_sample:
             candidate_rows.append(candidate_sample)
 
+    selected_candidate = select_zone_level_candidate(
+        ranked_candidates=best_candidate.ranked_candidates,
+        candidate_rows=candidate_rows,
+    )
+
+    selected_code = selected_candidate.get("code") or best_candidate.code
+
+    sample = next(
+        (
+            candidate_row
+            for candidate_row in candidate_rows
+            if candidate_row.get("code") == selected_code
+        ),
+        None,
+    )
+
+    if sample is None:
+        sample = fetch_sample_by_code(
+            supabase_url=settings.supabase_url,
+            service_role_key=settings.supabase_service_role_key,
+            code=selected_code,
+        )
+
+    if sample is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Matched sample not found: {selected_code}",
+        )
+
+    images = fetch_images_by_sample_id(
+        supabase_url=settings.supabase_url,
+        service_role_key=settings.supabase_service_role_key,
+        sample_id=sample["id"],
+    )
+
+    signed_images = attach_signed_urls_to_images(
+        supabase_url=settings.supabase_url,
+        service_role_key=settings.supabase_service_role_key,
+        bucket=settings.supabase_storage_bucket,
+        images=images,
+    )
+
+    payload = build_result_payload(sample, signed_images)
+
     reranked_candidates = rerank_candidates(
         ranked_candidates=best_candidate.ranked_candidates,
         candidate_rows=candidate_rows,
-        anchor_code=best_candidate.code,
+        anchor_code=selected_code,
     )
 
     top_candidates = build_top_candidate_payloads(
@@ -214,9 +232,15 @@ def post_analysis(request: AnalysisRequest) -> dict:
     )
 
     payload["similarity"] = {
-        "score": best_candidate.score,
+        "score": selected_candidate.get("score", best_candidate.score),
+        "visual_top_score": best_candidate.score,
+        "visual_top_code": best_candidate.code,
         "confidence_label": best_candidate.confidence_label,
         "method": best_candidate.method,
+        "selection_method": ZONE_SELECTION_METHOD,
+        "selection_reason": selected_candidate.get("selection_reason"),
+        "selected_zone": selected_candidate.get("selected_zone"),
+        "zone_scores": selected_candidate.get("zone_scores", []),
         "reranking_method": RERANKING_METHOD,
         "note": best_candidate.note,
         "top_candidates": top_candidates,
@@ -231,8 +255,10 @@ def post_analysis(request: AnalysisRequest) -> dict:
         "image_mime_type": decoded_image.mime_type,
         "image_size_bytes": decoded_image.size_bytes,
         "image_saved_path": to_backend_relative_path(decoded_image.saved_path),
-        "matched_code": best_candidate.code,
+        "matched_code": selected_code,
+        "visual_top_code": best_candidate.code,
         "mode": best_candidate.method,
+        "selection_method": ZONE_SELECTION_METHOD,
         "preprocessing_method": preprocessing.method if preprocessing else None,
         "preprocessed_image_saved_path": (
             to_backend_relative_path(preprocessing.processed_path)

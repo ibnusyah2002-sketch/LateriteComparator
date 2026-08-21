@@ -16,7 +16,7 @@ from app.ai.preprocessing import PreprocessedImage, preprocess_scan_image
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
 FEATURE_CACHE_PATH = BACKEND_ROOT / "feature_cache" / "comparator_features.json"
 DEFAULT_COMPARATOR_CODE = "BG1 - 01"
-VISUAL_CANDIDATE_POOL_LIMIT = 20
+VISUAL_CANDIDATE_POOL_LIMIT = 25
 
 
 @dataclass(frozen=True)
@@ -97,12 +97,11 @@ def find_best_candidate(scan_image_path: Path) -> SimilarityCandidate:
         code=best["code"] or DEFAULT_COMPARATOR_CODE,
         score=score,
         confidence_label=confidence_label_from_score(score),
-        method="color_texture_feature_v1_preprocessed",
+        method="color_feature_v2_preprocessed",
         note=(
             "Matched using center-cropped and auto-contrasted scan image with "
-            "color, histogram, grayscale contrast, and edge-density texture features. "
-            "This improves roughness sensitivity before future geology-aware reranking "
-            "and OpenCLIP improvements."
+            "lightweight color statistics and RGB histogram. Result selection is "
+            "then adjusted using zone-level candidate distribution."
         ),
         ranked_candidates=visual_candidates,
         preprocessing=preprocessing,
